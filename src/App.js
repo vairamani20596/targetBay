@@ -1,4 +1,5 @@
 import React, {Component} from 'react'
+import {DragDropContext, Droppable, Draggable} from 'react-beautiful-dnd'
 // import 'bootstrap/dist/css/bootstrap.min.css';
 
 
@@ -9,7 +10,8 @@ class App extends Component{
     this.state = {
       edit:false,
       userData:[],
-      indexTitle: ""
+      indexTitle: "",
+      draggedData:{}
     }
   }
 componentDidMount(){
@@ -85,7 +87,37 @@ componentDidMount(){
    
 
   }
- 
+
+  //drag items
+
+  onDragEnd = (result) => {
+    console.log(result)
+    const {destination, source, reason} = result;
+    
+    if(!destination || reason === 'CANCEL'){
+      return;   
+    }
+
+    if(destination.droppableId === source.droppableId && destination.index === source.index){
+      return;
+    }
+
+    const users = Object.assign([],this.state.userData)
+    const droppedUser =this.state.userData[source.index];
+
+    users.splice(source.index, 1)
+    users.splice(destination.index, 0, droppedUser)
+
+    this.setState({
+      userData:users
+    },()=>{
+      var arr = JSON.stringify(this.state.userData)
+      localStorage.setItem("userDB", arr);
+    })
+   
+  }
+
+  
 render(){
  
   return (
@@ -114,10 +146,11 @@ render(){
         {this.state.userData.length < 20 ?
         <div className="text-center">
           <button type="submit" disabled={!this.state.firstName || !this.state.lastName || !this.state.email} className="btn btn-primary" >Save</button>
-        </div> : ""}
+        </div> :<div className="text-center">Only up to 20 people will be allowed.Here no space</div> }
         </form>
       </div>
     </div>
+    <DragDropContext onDragEnd={this.onDragEnd}>
     <table className="table table-bordered">
       <thead className="thead-dark">
         <tr>
@@ -130,30 +163,47 @@ render(){
           <th></th>
         </tr>
       </thead>
-      {this.state.userData.map((userDetail , index) => (
-      <tbody key={index}>
-        <tr>
-          {
-            this.state.edit && this.state.indexTitle === index ? 
-            <>
-            <th>{index + 1}</th> 
-            <td><input type="text" name="firstName" value={userDetail['firstName']}  placeholder="Enter your first name"  onChange={(e)=>this.updateonChangeValues(e, index)} /></td>
-            <td><input type="text" name="lastName" value={userDetail['lastName']}  placeholder="Enter your last name" onChange={(e)=>this.updateonChangeValues(e, index)} /></td>
-            <td><input type="email" name="email"  value={userDetail['email']}  placeholder="Enter your email-ID" onChange={(e)=>this.updateonChangeValues(e, index)}/></td></> : 
-            <><th>{index + 1}</th> 
-            <td>{userDetail.firstName}</td>
-            <td>{userDetail.lastName}</td>
-            <td>{userDetail.email}</td></>
-          }
-          
-          <td><button type="button" className="btn btn-secondary" onClick={()=>{this.setState({edit:true},()=>{this.editDetails(index)})}} disabled={this.state.edit}>Edit</button></td> 
-          <td><button type="button" className="btn btn-secondary" onClick={()=>{this.setState({edit:false})}} disabled={!this.state.edit}>update</button></td>
-          <td><button type="button" className="btn btn-danger"onClick={()=>this.DeleteMethod(index)}>Delete</button></td>
-        </tr>
-      </tbody>
-      ) 
-        )}
+      <Droppable droppableId="dp1">
+        {
+          (provided) => (
+            <tbody ref={provided.innerRef} {...provided.droppableProps}>
+            {this.state.userData.map((userDetail , index) => 
+                  (
+                    <Draggable key={index} draggableId={index+''} index={index}>
+                      {(provided) => (
+                        <tr key={index} ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                        {
+                          this.state.edit && this.state.indexTitle === index ? 
+                          <>
+                          <th>{index + 1}</th> 
+                          <td><input type="text" name="firstName" value={userDetail['firstName']}  placeholder="Enter your first name"  onChange={(e)=>this.updateonChangeValues(e, index)} /></td>
+                          <td><input type="text" name="lastName" value={userDetail['lastName']}  placeholder="Enter your last name" onChange={(e)=>this.updateonChangeValues(e, index)} /></td>
+                          <td><input type="email" name="email"  value={userDetail['email']}  placeholder="Enter your email-ID" onChange={(e)=>this.updateonChangeValues(e, index)}/></td></> 
+                          : 
+                          <>
+                          <th>{index + 1}</th> 
+                            <td> {userDetail.firstName}</td>
+                            <td>{userDetail.lastName}</td>
+                            <td>{userDetail.email}</td>
+                            </>
+                        }
+                        
+                        <td><button type="button" className="btn btn-secondary" onClick={()=>{this.setState({edit:true},()=>{this.editDetails(index)})}} disabled={this.state.edit}>Edit</button></td> 
+                        <td><button type="button" className="btn btn-secondary" onClick={()=>{this.setState({edit:false})}} disabled={!this.state.edit}>update</button></td>
+                        <td><button type="button" className="btn btn-danger"    onClick={()=>this.DeleteMethod(index)}>Delete</button></td>
+                      </tr>
+                      )}
+                    </Draggable>
+                  ) 
+            
+              )}
+              {/* {provided.placeholder} */}
+            </tbody>
+          )
+        }
+       </Droppable>
     </table>
+    </DragDropContext>
   </div>
   </>
   );
